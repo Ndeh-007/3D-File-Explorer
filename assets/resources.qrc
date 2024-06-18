@@ -1,0 +1,16 @@
+<!DOCTYPE RCC>
+
+<RCC version="1.0">
+    <qresource>
+        <!--   IMAGES     -->
+        <file>images/logo.png</file>
+        <file>images/logo.ico</file>
+        <file>images/file.png</file>
+        <file>images/folder.png</file>
+
+        <!--   MESH     -->
+        <file>meshes/cube.obj</file>
+        <file>meshes/cuboid.obj</file>
+        <file>meshes/sphere.obj</file>
+    </qresource>
+</RCC>
