@@ -30,6 +30,8 @@ class VPropertiesPanel(VScrollWidget):
         contentsLayout.addWidget(self.propsToolbar)
         contentsLayout.addWidget(propsGroup)
         contentsLayout.addStretch()
+
+
         contentsLayout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         contents = QWidget()

@@ -1,3 +1,4 @@
+import os.path
 from pathlib import Path
 
 from PySide6.QtCore import Qt
@@ -9,6 +10,7 @@ from core.structs import AppActionTypes
 from core.utils.assets_importer import qrcImage
 from core.utils.path_manager import PathManager
 from views.components.menubar_widgets import VNavigationButtons, VOptionsButtons, VSearchBarWidget
+from views.components.status_bar import VStatusBar
 from views.sections.scene import V3DWindow
 from views.sections.properties_panel import VPropertiesPanel
 
@@ -24,6 +26,7 @@ class FileExplorer(FramelessMainWindow):
         self.navigationButtons = VNavigationButtons()
         self.optionsButtons = VOptionsButtons()
         self.searchBarWidget = VSearchBarWidget()
+        self.customStatusBar = VStatusBar()
 
         # add components to title bar
         self._titleBar = StandardTitleBar(self)
@@ -75,12 +78,16 @@ class FileExplorer(FramelessMainWindow):
 
     # region initialize
     def __initialize(self):
+        self.setStatusBar(self.customStatusBar)
+        self.updateNavBar(self.pathManager.currentPath())
+        self.customStatusBar.updateNumItems(self.pathManager.currentPath())
         self.propsPanel.stackedLayout.setCurrentIndex(1)
 
     # endregion
 
     # region configure
     def __configure(self):
+        self.searchBarWidget.inputChanged.connect(self.__handleSearchButtonPressed)
         self.navigationButtons.actionTriggered.connect(self.__handleNavButtonsActions)
     # endregion
 
@@ -92,24 +99,29 @@ class FileExplorer(FramelessMainWindow):
         :return:
         """
         # changes the ssearch bar text
-        self.searchBarWidget.setSearchInput(path)
+        self.searchBarWidget.setDirectoryInput(path)
+        self.customStatusBar.updateNumItems(self.pathManager.currentPath())
 
         # update the navbar icons
         if self.pathManager.isOnlyPath():
             self.navigationButtons.backAction.setDisabled(True)
             self.navigationButtons.forwardAction.setDisabled(True)
+            return
 
         if self.pathManager.isMiddlePath(path):
             self.navigationButtons.backAction.setDisabled(False)
             self.navigationButtons.forwardAction.setDisabled(False)
+            return
 
         if self.pathManager.isLastPath(path):
             self.navigationButtons.backAction.setDisabled(False)
             self.navigationButtons.forwardAction.setDisabled(True)
+            return
 
         if self.pathManager.isFirstPath(path):
             self.navigationButtons.backAction.setDisabled(True)
             self.navigationButtons.forwardAction.setDisabled(False)
+            return
 
     # endregion
 
@@ -127,33 +139,55 @@ class FileExplorer(FramelessMainWindow):
 
     # region event handlers
 
+    def __handleSearchButtonPressed(self, _=None):
+        """
+        takes path in the search bar and jumps to it
+        :return:
+        """
+        path = self.searchBarWidget.directoryInput.text()
+        if os.path.exists(path):
+            self.pathManager.updatePaths(path)
+            self.view.updateScene(path)
+            self.updateNavBar(path)
+        else:
+            self.searchBarWidget.setDirectoryInput(self.pathManager.currentPath())
+
     def __handleNavButtonsActions(self, action: QAction):
         """
         handles actions from the navigation buttons
         :param action:
         :return:
         """
-
+        p = None
         if action.data() == AppActionTypes.BACK:
-            path = self.pathManager.previous()
-            self.view.updateScene(path)
-            self.searchBarWidget.setSearchInput(path)
+            p = self.pathManager.previous()
+            self.view.updateScene(p)
+            self.searchBarWidget.setDirectoryInput(p)
 
         if action.data() == AppActionTypes.FORWARD:
-            path = self.pathManager.next()
-            self.view.updateScene(path)
-            self.searchBarWidget.setSearchInput(path)
+            p = self.pathManager.next()
+            self.view.updateScene(p)
+            self.searchBarWidget.setDirectoryInput(p)
 
         if action.data() == AppActionTypes.UP:
             p = self.pathManager.currentPath()
             if p is None:
                 return
-            path = Path(p).parent
-            self.view.updateScene(str(path))
-            self.searchBarWidget.setSearchInput(str(path))
+
+            p = Path(p).parent
+            if p is None:
+                return
+            p = str(p)
+            self.pathManager.updatePaths(p)
+            self.view.updateScene(p)
+            self.searchBarWidget.setDirectoryInput(p)
 
         if action.data() == AppActionTypes.REFRESH:
-            self.view.constructScene()
+            p = self.pathManager.currentPath()
+            self.view.updateScene(p)
+
+        if p is not None and os.path.exists(p):
+            self.updateNavBar(p)
 
     def __handleCurrentDirChanged(self, path):
         self.pathManager.updatePaths(str(path))

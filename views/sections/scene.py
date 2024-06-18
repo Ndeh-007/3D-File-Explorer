@@ -26,7 +26,7 @@ class V3DWindow(Qt3DExtras.Qt3DWindow):
         self.__radius: int = 20
         self.__currentDir: str = "C:\\"
 
-        # region create scene
+        # region - create scene
 
         # Root entity
         self.rootEntity = Qt3DCore.QEntity()
@@ -68,7 +68,6 @@ class V3DWindow(Qt3DExtras.Qt3DWindow):
 
     def __handleLeafClicked(self, opts: LeafClickOptions):
         if opts.pickEvent.button() == Qt3DRender.QPickEvent.Buttons.LeftButton:
-            print(opts.pickEvent.button())
             self.__currentDir = opts.leafModel.path
             self.currentDirectoryChanged.emit(self.__currentDir)
 
@@ -78,7 +77,7 @@ class V3DWindow(Qt3DExtras.Qt3DWindow):
             self.constructScene()
 
         if opts.pickEvent.button() == Qt3DRender.QPickEvent.Buttons.RightButton:
-            print("showing opts: ", opts.leafModel.path)
+            pass
 
     def __handleUpVectorChanged(self, vector: QVector3D):
         pass
@@ -168,8 +167,10 @@ class V3DWindow(Qt3DExtras.Qt3DWindow):
         if not os.path.exists(path):
             return
 
+        if os.path.isfile(path):
+            return
+
         self.__currentDir = path
-        print(self.__currentDir)
         self.constructScene()
 
     # endregion

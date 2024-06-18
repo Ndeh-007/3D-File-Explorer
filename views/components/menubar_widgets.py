@@ -1,5 +1,8 @@
+import os.path
+
 import qtawesome
-from PySide6.QtGui import QAction
+from PySide6.QtCore import QObject, Signal
+from PySide6.QtGui import QAction, QKeyEvent, Qt
 from PySide6.QtWidgets import QToolBar, QWidget, QLineEdit, QGridLayout, QPushButton
 
 from core.structs import AppActionTypes
@@ -62,7 +65,9 @@ class VOptionsButtons(QToolBar):
         self.addAction(settingsAction)
 
 
-class VSearchBarWidget(QWidget):
+class VSearchBarWidget(QWidget, QObject):
+    inputChanged = Signal(str)
+
     def __init__(self, parent: QWidget = None):
         super().__init__(parent=parent)
 
@@ -73,22 +78,40 @@ class VSearchBarWidget(QWidget):
         self.searchInput = QLineEdit()
         self.searchInput.setPlaceholderText("Search...")
 
-        self.searchButton = QPushButton()
-        searchIcon = qtawesome.icon('msc.search')
-        self.searchButton.setIcon(searchIcon)
+        self.jumpButton = QPushButton()
+        searchIcon = qtawesome.icon('msc.arrow-right')
+        self.jumpButton.setIcon(searchIcon)
 
         layout = QGridLayout()
         layout.addWidget(self.directoryInput, 0, 0)
-        layout.addWidget(self.searchButton, 0, 1)
+        layout.addWidget(self.jumpButton, 0, 1)
         layout.addWidget(self.searchInput, 1, 0)
         layout.setColumnStretch(0, 1)
 
         layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(layout)
-
-        self.searchInput.hide()
-
         # endregion
 
-    def setSearchInput(self, value: str):
+        self.__initialize()
+        self.__configure()
+
+    def __initialize(self):
+        self.searchInput.hide()
+
+    def __configure(self):
+        self.directoryInput.textChanged.connect(self.__handleDirectoryTextChanged)
+        self.jumpButton.pressed.connect(self.__handleJumpButtonPressed)
+        self.directoryInput.editingFinished.connect(self.__editingFinished)
+
+    def setDirectoryInput(self, value: str):
         self.directoryInput.setText(value)
+
+    def __handleDirectoryTextChanged(self, text):
+        pass
+
+    def __editingFinished(self):
+        self.__handleJumpButtonPressed()
+
+    def __handleJumpButtonPressed(self):
+        path = self.directoryInput.text()
+        self.inputChanged.emit(path)

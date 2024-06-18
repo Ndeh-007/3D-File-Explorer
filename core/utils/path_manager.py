@@ -1,5 +1,5 @@
 import os.path
-from uuid import uuid4
+import time
 
 
 class PathManager:
@@ -7,10 +7,10 @@ class PathManager:
 
         self.__id_idx_map: dict[str, int] = {}
         self.__idx_id_map: dict[int, str] = {}
-        self.__cIdx: int = -1
+        self.__cIdx: int = 0
 
-        self.__paths: list[str] = []
-        self.__currentPath: str = ""
+        self.__paths: list[str] = ["C:\\"]
+        self.__currentPath: str = "C:\\"
 
     def updatePaths(self, path: str):
 
@@ -19,7 +19,7 @@ class PathManager:
 
         self.__paths.append(path)
         idx = len(self.__paths) - 1
-        pid = str(uuid4())
+        pid = str(time.time())
 
         self.__id_idx_map.update({pid: idx})
         self.__idx_id_map.update({idx: pid})
@@ -37,6 +37,7 @@ class PathManager:
         i = self.__id_idx_map.get(pid) - 1
         if i < 0:
             return self.__paths[self.__cIdx]
+        self.__cIdx = i
         return self.__paths[i]
 
     def next(self):
@@ -49,6 +50,7 @@ class PathManager:
         i = self.__id_idx_map.get(pid) + 1
         if i >= len(self.__paths):
             return self.__paths[self.__cIdx]
+        self.__cIdx = i
         return self.__paths[i]
 
     def reset(self):
@@ -68,7 +70,7 @@ class PathManager:
         gets the current path
         :return:
         """
-        if self.__cIdx < 0:
+        if self.__cIdx not in range(len(self.__paths)):
             return None
         return self.__paths[self.__cIdx]
 
