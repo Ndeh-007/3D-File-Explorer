@@ -2,6 +2,8 @@ import os.path
 
 from PySide6.QtWidgets import QStatusBar, QLabel
 
+from core.utils.helpers import countItemsInDirectory
+
 
 class VStatusBar(QStatusBar):
     def __init__(self):
@@ -24,22 +26,6 @@ class VStatusBar(QStatusBar):
 
         if not os.path.exists(path) or os.path.isfile(path):
             return
-        count = self.__countItemsInDirectory(path)
+        count = countItemsInDirectory(path)
         self.numItemsLabel.setText(f" {count} items ")
 
-    @staticmethod
-    def __countItemsInDirectory(path: str):
-        """
-        Counts the number of items in a directory
-        :param path:
-        :return:
-        """
-        try:
-            items = os.listdir(path)
-            return len(items)
-        except FileNotFoundError:
-            print(f"The directory {path} does not exist.")
-            return 0
-        except PermissionError:
-            print(f"Permission denied to access the directory {path}.")
-            return 0

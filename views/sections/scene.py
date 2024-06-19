@@ -1,15 +1,13 @@
 import os
-import platform
-import time
 
 import numpy as np
 from PySide6.Qt3DCore import (Qt3DCore)
 from PySide6.Qt3DExtras import (Qt3DExtras)
 from PySide6.Qt3DRender import Qt3DRender
-from PySide6.QtCore import (QDir, Signal)
-from PySide6.QtGui import (QVector3D, Qt)
+from PySide6.QtCore import (Signal)
+from PySide6.QtGui import (QVector3D)
 
-from core.structs import LeafType
+from core.utils.helpers import directoryType
 from models.leaf_click_options import LeafClickOptions
 from models.tree_leaf_model import TreeLeafModel
 from views.components.entities.tree_leaf import TreeLeaf
@@ -17,6 +15,8 @@ from views.components.entities.tree_leaf import TreeLeaf
 
 class V3DWindow(Qt3DExtras.Qt3DWindow):
     currentDirectoryChanged = Signal(str)
+    showOptions = Signal(str)
+    openFile = Signal(str)
 
     def __init__(self):
         super().__init__()
@@ -68,16 +68,17 @@ class V3DWindow(Qt3DExtras.Qt3DWindow):
 
     def __handleLeafClicked(self, opts: LeafClickOptions):
         if opts.pickEvent.button() == Qt3DRender.QPickEvent.Buttons.LeftButton:
+            if os.path.isfile(opts.leafModel.path):
+                self.openFile.emit(opts.leafModel.path)
+                return
+
             self.__currentDir = opts.leafModel.path
             self.currentDirectoryChanged.emit(self.__currentDir)
-
-            if os.path.isfile(self.__currentDir):
-                return
 
             self.constructScene()
 
         if opts.pickEvent.button() == Qt3DRender.QPickEvent.Buttons.RightButton:
-            pass
+            self.showOptions.emit(opts.leafModel.path)
 
     def __handleUpVectorChanged(self, vector: QVector3D):
         pass
@@ -85,35 +86,6 @@ class V3DWindow(Qt3DExtras.Qt3DWindow):
     # endregion
 
     # region workers
-
-    @staticmethod
-    def directoryType(path: str) -> LeafType:
-        """
-        gets the type of the directory
-        :param path:
-        :return:
-        """
-
-        def is_drive(_path):
-            if platform.system() == "Windows":
-                return len(path) == 2 and path[1] == ':'
-            else:
-                # Unix-like systems: Check if the path is a mount point
-                return os.path.ismount(path)
-
-        def test_path(_path: str):
-            if os.path.isfile(_path):
-                return LeafType.FILE
-            elif os.path.isdir(_path):
-                if is_drive(_path):
-                    return LeafType.DRIVE
-                else:
-                    return LeafType.FOLDER
-            else:
-                return LeafType.UNSET
-
-        return test_path(path)
-
     def clearScene(self):
         for key, leaf in self.__leaves.items():
             leaf.removeAllComponents()
@@ -148,7 +120,7 @@ class V3DWindow(Qt3DExtras.Qt3DWindow):
 
             # create leaf
             path = os.path.join(self.__currentDir, dir_list[i])
-            leafModel = TreeLeafModel(path, dir_list[i], self.directoryType(path), path)
+            leafModel = TreeLeafModel(path, dir_list[i], directoryType(path), path)
             leaf = TreeLeaf(self.rootEntity, self.camera(), leafModel)
             leaf.clicked.connect(self.__handleLeafClicked)
 

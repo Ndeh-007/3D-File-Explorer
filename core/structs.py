@@ -20,3 +20,29 @@ class LeafType(Enum):
     DRIVE = 2
     UNSET = 3
     MOUNT = 4
+
+
+# region - alert
+
+class AlertDisplayMode(Enum):
+    CONSOLE = 0
+    NOTIFICATION = 1
+
+
+class AlertType(Enum):
+    ERROR = 0
+    SUCCESS = 1
+    WARNING = 2
+    EVENT = 3
+
+
+class AlertDisplayType(Enum):
+    CONSOLE = 0
+    NOTIFICATION = 1
+
+
+class AlertCode(Enum):
+    CUSTOM = "CUSTOM"
+# endregion
+
+

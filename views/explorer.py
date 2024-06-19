@@ -8,7 +8,10 @@ from qframelesswindow import FramelessMainWindow, StandardTitleBar
 
 from core.structs import AppActionTypes
 from core.utils.assets_importer import qrcImage
+from core.utils.helpers import getDirectorProperties, openFile
 from core.utils.path_manager import PathManager
+from core.utils.process_manager import ProcessManger
+from models.sub_process_item_model import SubProcessItemModel
 from views.components.menubar_widgets import VNavigationButtons, VOptionsButtons, VSearchBarWidget
 from views.components.status_bar import VStatusBar
 from views.sections.scene import V3DWindow
@@ -21,6 +24,7 @@ class FileExplorer(FramelessMainWindow):
 
         # define helpers
         self.pathManager = PathManager()
+        self.processManager = ProcessManger()
 
         # define window components
         self.navigationButtons = VNavigationButtons()
@@ -31,7 +35,7 @@ class FileExplorer(FramelessMainWindow):
         # add components to title bar
         self._titleBar = StandardTitleBar(self)
         self._titleBar.hBoxLayout.insertStretch(3, 1)
-        self._titleBar.hBoxLayout.insertWidget(4, self.navigationButtons, 1,  Qt.AlignmentFlag.AlignVCenter)
+        self._titleBar.hBoxLayout.insertWidget(4, self.navigationButtons, 1, Qt.AlignmentFlag.AlignVCenter)
         self._titleBar.hBoxLayout.insertStretch(5, 1)
         self._titleBar.hBoxLayout.insertWidget(6, self.searchBarWidget, 1, Qt.AlignmentFlag.AlignLeft)
         self._titleBar.hBoxLayout.insertStretch(7, 1)
@@ -39,7 +43,6 @@ class FileExplorer(FramelessMainWindow):
 
         # region - 3d scene
         self.view = V3DWindow()
-        self.view.currentDirectoryChanged.connect(self.__handleCurrentDirChanged)
         container3d = self.createWindowContainer(self.view)
         # endregion
 
@@ -51,7 +54,7 @@ class FileExplorer(FramelessMainWindow):
         splitter.setContentsMargins(0, 0, 0, 0)
         splitter.addWidget(container3d)
         splitter.addWidget(self.propsPanel)
-        splitter.setSizes([400, 100])
+        splitter.setSizes([400, 120])
 
         # Set up the layout
         layout = QGridLayout()
@@ -69,7 +72,7 @@ class FileExplorer(FramelessMainWindow):
         self.setTitleBar(self._titleBar)
         self.setWindowTitle("FileTree")
 
-        self.resize(1000, 800)
+        self.resize(1000, 500)
 
         self._titleBar.raise_()
         self.__initialize()
@@ -89,6 +92,10 @@ class FileExplorer(FramelessMainWindow):
     def __configure(self):
         self.searchBarWidget.inputChanged.connect(self.__handleSearchButtonPressed)
         self.navigationButtons.actionTriggered.connect(self.__handleNavButtonsActions)
+        self.view.currentDirectoryChanged.connect(self.__handleCurrentDirChanged)
+        self.view.showOptions.connect(self.__handleShowItemProperties)
+        self.view.openFile.connect(self.__handleOpenFile)
+
     # endregion
 
     # region workers
@@ -138,6 +145,32 @@ class FileExplorer(FramelessMainWindow):
     # endregion
 
     # region event handlers
+
+    def __handleShowItemProperties(self, path: str):
+        """
+        shows the properties of the target file/dir
+        :param path:
+        :return:
+        """
+        self.propsPanel.hidePlaceholder()
+        self.propsPanel.activeItemLabel.setText(str(Path(path).name))
+        self.propsPanel.changePreviewIcon(path)
+
+        def propFetchComplete(props):
+            if not isinstance(props, list):
+                print(props)
+                return
+            if len(props) == 0:
+                return
+            for i, items in enumerate(props):
+                self.propsPanel.activeItemPropertiesTable.setItem(i, 0, items[0])
+                self.propsPanel.activeItemPropertiesTable.setItem(i, 1, items[1])
+
+        def propsFetchFailed(error):
+            print("Failed with error", error)
+
+        p = SubProcessItemModel('fetch_props', getDirectorProperties, path, propFetchComplete, propsFetchFailed)
+        self.processManager.launch(p)
 
     def __handleSearchButtonPressed(self, _=None):
         """
@@ -192,6 +225,15 @@ class FileExplorer(FramelessMainWindow):
     def __handleCurrentDirChanged(self, path):
         self.pathManager.updatePaths(str(path))
         self.updateNavBar(str(path))
+        self.propsPanel.hidePlaceholder()
+
+    def __handleOpenFile(self, path):
+        """
+        opens the target file
+        :param path:
+        :return:
+        """
+        openFile(path)
 
     # endregion
 
@@ -199,4 +241,3 @@ class FileExplorer(FramelessMainWindow):
     def __connectSignals(self):
         pass
     # endregion
-
