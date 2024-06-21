@@ -169,7 +169,8 @@ class FileExplorer(FramelessMainWindow):
         def propsFetchFailed(error):
             print("Failed with error", error)
 
-        p = SubProcessItemModel('fetch_props', getDirectorProperties, path, propFetchComplete, propsFetchFailed)
+        p = SubProcessItemModel('fetch_props', getDirectorProperties, path, propFetchComplete, propsFetchFailed,
+                                name="GET_DIR_SIZE")
         self.processManager.launch(p)
 
     def __handleSearchButtonPressed(self, _=None):

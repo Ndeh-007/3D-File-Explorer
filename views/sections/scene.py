@@ -4,12 +4,13 @@ import numpy as np
 from PySide6.Qt3DCore import (Qt3DCore)
 from PySide6.Qt3DExtras import (Qt3DExtras)
 from PySide6.Qt3DRender import Qt3DRender
-from PySide6.QtCore import (Signal)
+from PySide6.QtCore import (Signal, QDir)
 from PySide6.QtGui import (QVector3D)
 
 from core.utils.helpers import directoryType
 from models.leaf_click_options import LeafClickOptions
 from models.tree_leaf_model import TreeLeafModel
+from views.components.entities.floating_grid import FloatingGrid
 from views.components.entities.tree_leaf import TreeLeaf
 
 
@@ -24,7 +25,8 @@ class V3DWindow(Qt3DExtras.Qt3DWindow):
         # define variables
         self.__leaves: dict[str, TreeLeaf] = {}
         self.__radius: int = 20
-        self.__currentDir: str = "C:\\"
+        self.__currentDir: str = QDir.rootPath()
+        self.__others: dict[str, object] = {}
 
         # region - create scene
 
@@ -54,6 +56,7 @@ class V3DWindow(Qt3DExtras.Qt3DWindow):
 
     # regin initialize
     def __initialize(self):
+        # self.constructGrid()
         self.constructScene()
 
     # endregion
@@ -93,12 +96,23 @@ class V3DWindow(Qt3DExtras.Qt3DWindow):
 
         self.__leaves.clear()
 
+    def constructGrid(self):
+        """
+        creates a grid and throws it in space
+        :return:
+        """
+        grid = FloatingGrid(self.rootEntity, self.camera())
+        grid.moveTo(QVector3D(0, 0, 0))
+        self.__others.update({"grid": grid})
+
     def constructScene(self):
         """
         takes in the particular directory and then positions them in 3d space.
         if dirPath is none, we are in the base directory
         :return:
         """
+        # return
+
         self.clearScene()
 
         phi = np.pi * (3. - np.sqrt(5.))

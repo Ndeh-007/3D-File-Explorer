@@ -1,6 +1,8 @@
 import os.path
 import time
 
+from PySide6.QtCore import QDir
+
 
 class PathManager:
     def __init__(self):
@@ -9,8 +11,8 @@ class PathManager:
         self.__idx_id_map: dict[int, str] = {}
         self.__cIdx: int = 0
 
-        self.__paths: list[str] = ["C:\\"]
-        self.__currentPath: str = "C:\\"
+        self.__paths: list[str] = [QDir.rootPath()]
+        self.__currentPath: str = QDir.rootPath()
 
     def updatePaths(self, path: str):
 
