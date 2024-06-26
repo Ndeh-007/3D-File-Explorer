@@ -27,6 +27,7 @@ class V3DWindow(Qt3DExtras.Qt3DWindow):
         self.__radius: int = 20
         self.__currentDir: str = QDir.rootPath()
         self.__others: dict[str, object] = {}
+        self.__activeLeafPid: str = QDir.rootPath()
 
         # region - create scene
 
@@ -83,12 +84,34 @@ class V3DWindow(Qt3DExtras.Qt3DWindow):
         if opts.pickEvent.button() == Qt3DRender.QPickEvent.Buttons.RightButton:
             self.showOptions.emit(opts.leafModel.path)
 
+        self.highlightLeaf(opts.leafModel.pid)
+
     def __handleUpVectorChanged(self, vector: QVector3D):
         pass
 
     # endregion
 
-    # region workers
+    # region
+
+    def highlightLeaf(self, pid: str):
+        """
+        changes the color of a particular leaf to indicate that it has been interacted with
+        :param pid: the id of the leaf to be lighted
+        :return:
+        """
+
+        # remove previous highlight
+        prevLeaf = self.__leaves.get(self.__activeLeafPid)
+        if prevLeaf is not None:
+            prevLeaf.removeHighlight()
+
+        leaf = self.__leaves.get(pid)
+        if leaf is None:
+            return False
+
+        leaf.highlight()
+        self.__activeLeafPid = pid
+
     def clearScene(self):
         for key, leaf in self.__leaves.items():
             leaf.removeAllComponents()

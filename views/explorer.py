@@ -224,6 +224,7 @@ class FileExplorer(FramelessMainWindow):
             self.updateNavBar(p)
 
     def __handleCurrentDirChanged(self, path):
+        self.__handleShowItemProperties(str(path))
         self.pathManager.updatePaths(str(path))
         self.updateNavBar(str(path))
         self.propsPanel.hidePlaceholder()
