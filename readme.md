@@ -9,8 +9,8 @@ Read Everything below
 - No distribution ready, download source code and build
 
 # Installation
-1. Download the installation file from <a href="[release/setup.exe](https://github.com/Ndeh-007/3D-File-Explorer/blob/master/release/setup.exe)" download>here</a> (click to download)
-2. Run it as administrator and follow installation steps
+1. Download the installation file from <a href="https://drive.google.com/file/d/1f9lTEaPugDKQEVuh_CtrlufiFs9YQZGq/view?usp=drive_link">here</a> 
+2. Extract and Run setup.exe as administrator. follow installation steps. Read "readme.txt"
 3. You are free to use
 
 # Usage
