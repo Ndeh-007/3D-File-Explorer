@@ -10,7 +10,7 @@ class VStatusBar(QStatusBar):
         super().__init__()
 
         self.numItemsLabel = QLabel(" 0 items ")
-        self.permanentWidget = QLabel(" FileTree ")
+        self.permanentWidget = QLabel("File World    ")
 
         self.addPermanentWidget(self.permanentWidget)
         self.addWidget(self.numItemsLabel)

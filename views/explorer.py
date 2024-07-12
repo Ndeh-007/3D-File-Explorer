@@ -70,7 +70,7 @@ class FileExplorer(FramelessMainWindow):
         self.setWindowIcon(windowIcon)
 
         self.setTitleBar(self._titleBar)
-        self.setWindowTitle("FileTree")
+        self.setWindowTitle("File World")
 
         self.resize(1000, 500)
 

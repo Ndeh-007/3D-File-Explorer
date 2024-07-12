@@ -60,6 +60,8 @@ class VPropertiesPanel(VScrollWidget):
         w.setLayout(self.stackedLayout)
         self.setContentWidget(w)
 
+        self.propsToolbar.hide()
+
     def showPlaceholder(self):
         self.stackedLayout.setCurrentIndex(0)
 
