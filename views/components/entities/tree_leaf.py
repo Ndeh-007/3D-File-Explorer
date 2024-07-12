@@ -1,7 +1,7 @@
 from PySide6.Qt3DCore import (Qt3DCore)
 from PySide6.Qt3DExtras import (Qt3DExtras)
 from PySide6.Qt3DRender import (Qt3DRender)
-from PySide6.QtCore import QObject, Signal, Slot
+from PySide6.QtCore import QObject, Signal, Slot, QUrl
 from PySide6.QtGui import (QMatrix4x4, QQuaternion, QVector3D, QFont, QColor)
 
 from models.leaf_click_options import LeafClickOptions
@@ -9,10 +9,13 @@ from models.tree_leaf_model import TreeLeafModel
 
 
 class LookAtTransform(Qt3DCore.QTransform):
-    def __init__(self, camera: Qt3DRender.QCamera, parent: QObject = None):
+    def __init__(self, camera: Qt3DRender.QCamera, scale: float = 1.0,
+                 pos: QVector3D = QVector3D(0, 0, 0), parent: QObject = None):
         super().__init__(parent)
         self.camera = camera
         self.target = QVector3D(0, 0, 0)
+        self.__pos = pos
+        self.__scale = scale
         self.update_rotation()
 
         self.camera.positionChanged.connect(self.update_rotation)
@@ -36,7 +39,18 @@ class LookAtTransform(Qt3DCore.QTransform):
             0.0, 0.0, 0.0, 1.0
         )
         self.setMatrix(rotation_matrix)
-        self.setScale(0.5)
+        self.setScale(self.__scale)
+        self.setTranslation(self.__pos)
+
+    def setPosition(self, pos: QVector3D):
+        self.__pos = pos
+
+    def pos(self):
+        return self.__pos
+
+    def setScale(self, scale: float) -> None:
+        self.__scale = scale
+        super().setScale(scale)
 
 
 class TreeLeaf(QObject):
@@ -48,29 +62,42 @@ class TreeLeaf(QObject):
         self.parentEntity = parentEntity
         self.model = model
 
+        self.highlightColor = "#2dbd3e"  # neon green
+        self.baseIconColor = QColor(0, 0, 0)  # default black
+        self.baseTextColor = QColor(255, 0, 0)  # red
+        self.baseShine = 5
+        self.baseIconScale = 1.0
+        self.baseTextScale = 0.5
+
         if model is None:
             self.model = TreeLeafModel()
 
         # region Icon Entity
         self.iconEntity = Qt3DCore.QEntity(self.parentEntity)
         self.iconMesh = Qt3DExtras.QCuboidMesh(self.parentEntity)
+
+        if self.model.isFile():
+            self.iconMesh = Qt3DRender.QMesh(self.parentEntity)
+            self.iconMesh.setSource(QUrl("qrc:/meshes/file_light.obj"))
+        if self.model.isFolder():
+            self.iconMesh = Qt3DRender.QMesh(self.parentEntity)
+            self.iconMesh.setSource(QUrl("qrc:/meshes/folder_light.obj"))
+
         self.iconObjectPicker = Qt3DRender.QObjectPicker(self.parentEntity)
         self.iconMaterial = Qt3DExtras.QPhongMaterial(self.parentEntity)
-        color = QColor(0, 0, 0)  # default black
-        shine = 10
         if model.isFile():
-            color = QColor(50, 130, 246)  # blue
+            self.baseIconColor = QColor(50, 130, 246)  # blue
         if model.isDrive():
-            color = QColor(128, 128, 128)  # grey
+            self.baseIconColor = QColor(128, 128, 128)  # grey
         if model.isFolder():
-            color = QColor(255, 201, 14)  # yellow
-        self.iconMaterial.setDiffuse(color)
-        self.iconMaterial.setAmbient(color)
-        # self.iconMaterial.setSpecular(color)
-        self.iconMaterial.setShininess(shine)
+            self.baseIconColor = QColor(255, 201, 14)  # yellow
 
-        self.iconTransform = Qt3DCore.QTransform()
-        self.iconTransform.setScale(1.0)
+        self.iconMaterial.setDiffuse(self.baseIconColor)
+        self.iconMaterial.setAmbient(self.baseIconColor)
+        # self.iconMaterial.setSpecular(self.baseIconColor)
+        self.iconMaterial.setShininess(self.baseShine)
+
+        self.iconTransform = LookAtTransform(camera, parent=self.parentEntity)
 
         self.iconEntity.addComponent(self.iconMesh)
         self.iconEntity.addComponent(self.iconObjectPicker)
@@ -81,17 +108,16 @@ class TreeLeaf(QObject):
 
         # region text
         # define the text entity
-        self.textEntity = Qt3DCore.QEntity(self.iconEntity)
-        self.textMaterial = Qt3DExtras.QPhongMaterial(self.iconEntity)
-        self.textMaterial.setDiffuse(QColor(255, 0, 0))
+        self.textEntity = Qt3DCore.QEntity(self.parentEntity)
+        self.textMaterial = Qt3DExtras.QPhongMaterial(self.parentEntity)
+        self.textMaterial.setDiffuse(self.baseTextColor)
 
-        self.textTransform = LookAtTransform(camera, self.iconEntity)
+        self.textTransform = LookAtTransform(camera, scale=0.4, parent=self.parentEntity)
         self.textTransform.rotationChanged.connect(self.handleTextRotationChanged)
         self.textTransform.scaleChanged.connect(self.handleTextScaleChanged)
         self.textTransform.matrixChanged.connect(self.handleTextRotationMatrixChanged)
-        self.textTransform.setScale(0.5)
 
-        self.textMesh = Qt3DExtras.QExtrudedTextMesh(self.iconEntity)
+        self.textMesh = Qt3DExtras.QExtrudedTextMesh(self.parentEntity)
         self.textMesh.setText(model.text)
         self.textMesh.setDepth(0.01)
         self.textMesh.setFont(QFont('monospace'))
@@ -110,8 +136,12 @@ class TreeLeaf(QObject):
         :return:
         """
         p, q = self.model.computeIconTextPositions(pos)
-        self.iconTransform.setTranslation(p)
-        self.textTransform.setTranslation(q)
+
+        self.iconTransform.setPosition(p)
+        self.textTransform.setPosition(q)
+
+        self.iconTransform.update_rotation()
+        self.textTransform.update_rotation()
 
     def __handleClick(self, event: Qt3DRender.QPickEvent):
         """
@@ -123,16 +153,13 @@ class TreeLeaf(QObject):
         self.clicked.emit(opts)
 
     def handleTextRotationChanged(self, rotation: QQuaternion):
-        p = self.model.textPosition()
-        self.textTransform.setTranslation(p)
+        return
 
     def handleTextRotationMatrixChanged(self):
-        p = self.model.textPosition()
-        self.textTransform.setTranslation(p)
+        return
 
     def handleTextScaleChanged(self, scale: float):
-        p = self.model.textPosition()
-        self.textTransform.setTranslation(p)
+        return
 
     def setEnabled(self, state):
         self.iconEntity.setEnabled(state)
@@ -147,3 +174,31 @@ class TreeLeaf(QObject):
         self.textEntity.removeComponent(self.textMaterial)
         self.textEntity.removeComponent(self.textMesh)
         self.textEntity.removeComponent(self.textTransform)
+
+    def highlight(self):
+        """
+        changes the color of the leaf to the highlight color
+        :return:
+        """
+        self.iconMaterial.setDiffuse(self.highlightColor)
+        self.iconMaterial.setAmbient(self.highlightColor)
+        self.iconMaterial.setSpecular(self.highlightColor)
+        self.iconMaterial.setShininess(10)
+
+        self.textMaterial.setDiffuse(self.highlightColor)
+        self.textMaterial.setAmbient(self.highlightColor)
+        self.textMaterial.setSpecular(self.highlightColor)
+        self.textMaterial.setShininess(10)
+
+    def removeHighlight(self):
+        """
+        removes the highlight from the leaf
+        :return:
+        """
+        self.iconMaterial.setDiffuse(self.baseIconColor)
+        self.iconMaterial.setAmbient(self.baseIconColor)
+        self.iconMaterial.setShininess(self.baseShine)
+
+        self.textMaterial.setDiffuse(self.baseTextColor)
+        self.textMaterial.setAmbient(self.baseTextColor)
+        self.textMaterial.setShininess(self.baseShine)

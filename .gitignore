@@ -1,3 +1,7 @@
 temp.py
 others/
 .idea/
+venv/
+installer/
+build/
+dist/

@@ -1,22 +1,23 @@
 import os
-import platform
-import time
 
 import numpy as np
 from PySide6.Qt3DCore import (Qt3DCore)
 from PySide6.Qt3DExtras import (Qt3DExtras)
 from PySide6.Qt3DRender import Qt3DRender
-from PySide6.QtCore import (QDir, Signal)
-from PySide6.QtGui import (QVector3D, Qt)
+from PySide6.QtCore import (Signal, QDir)
+from PySide6.QtGui import (QVector3D)
 
-from core.structs import LeafType
+from core.utils.helpers import directoryType
 from models.leaf_click_options import LeafClickOptions
 from models.tree_leaf_model import TreeLeafModel
+from views.components.entities.floating_grid import FloatingGrid
 from views.components.entities.tree_leaf import TreeLeaf
 
 
 class V3DWindow(Qt3DExtras.Qt3DWindow):
     currentDirectoryChanged = Signal(str)
+    showOptions = Signal(str)
+    openFile = Signal(str)
 
     def __init__(self):
         super().__init__()
@@ -24,9 +25,11 @@ class V3DWindow(Qt3DExtras.Qt3DWindow):
         # define variables
         self.__leaves: dict[str, TreeLeaf] = {}
         self.__radius: int = 20
-        self.__currentDir: str = "C:\\"
+        self.__currentDir: str = QDir.rootPath()
+        self.__others: dict[str, object] = {}
+        self.__activeLeafPid: str = QDir.rootPath()
 
-        # region create scene
+        # region - create scene
 
         # Root entity
         self.rootEntity = Qt3DCore.QEntity()
@@ -54,6 +57,7 @@ class V3DWindow(Qt3DExtras.Qt3DWindow):
 
     # regin initialize
     def __initialize(self):
+        # self.constructGrid()
         self.constructScene()
 
     # endregion
@@ -68,52 +72,45 @@ class V3DWindow(Qt3DExtras.Qt3DWindow):
 
     def __handleLeafClicked(self, opts: LeafClickOptions):
         if opts.pickEvent.button() == Qt3DRender.QPickEvent.Buttons.LeftButton:
-            print(opts.pickEvent.button())
+            if os.path.isfile(opts.leafModel.path):
+                self.openFile.emit(opts.leafModel.path)
+                return
+
             self.__currentDir = opts.leafModel.path
             self.currentDirectoryChanged.emit(self.__currentDir)
-
-            if os.path.isfile(self.__currentDir):
-                return
 
             self.constructScene()
 
         if opts.pickEvent.button() == Qt3DRender.QPickEvent.Buttons.RightButton:
-            print("showing opts: ", opts.leafModel.path)
+            self.showOptions.emit(opts.leafModel.path)
+
+        self.highlightLeaf(opts.leafModel.pid)
 
     def __handleUpVectorChanged(self, vector: QVector3D):
         pass
 
     # endregion
 
-    # region workers
+    # region
 
-    @staticmethod
-    def directoryType(path: str) -> LeafType:
+    def highlightLeaf(self, pid: str):
         """
-        gets the type of the directory
-        :param path:
+        changes the color of a particular leaf to indicate that it has been interacted with
+        :param pid: the id of the leaf to be lighted
         :return:
         """
 
-        def is_drive(_path):
-            if platform.system() == "Windows":
-                return len(path) == 2 and path[1] == ':'
-            else:
-                # Unix-like systems: Check if the path is a mount point
-                return os.path.ismount(path)
+        # remove previous highlight
+        prevLeaf = self.__leaves.get(self.__activeLeafPid)
+        if prevLeaf is not None:
+            prevLeaf.removeHighlight()
 
-        def test_path(_path: str):
-            if os.path.isfile(_path):
-                return LeafType.FILE
-            elif os.path.isdir(_path):
-                if is_drive(_path):
-                    return LeafType.DRIVE
-                else:
-                    return LeafType.FOLDER
-            else:
-                return LeafType.UNSET
+        leaf = self.__leaves.get(pid)
+        if leaf is None:
+            return False
 
-        return test_path(path)
+        leaf.highlight()
+        self.__activeLeafPid = pid
 
     def clearScene(self):
         for key, leaf in self.__leaves.items():
@@ -122,12 +119,23 @@ class V3DWindow(Qt3DExtras.Qt3DWindow):
 
         self.__leaves.clear()
 
+    def constructGrid(self):
+        """
+        creates a grid and throws it in space
+        :return:
+        """
+        grid = FloatingGrid(self.rootEntity, self.camera())
+        grid.moveTo(QVector3D(0, 0, 0))
+        self.__others.update({"grid": grid})
+
     def constructScene(self):
         """
         takes in the particular directory and then positions them in 3d space.
         if dirPath is none, we are in the base directory
         :return:
         """
+        # return
+
         self.clearScene()
 
         phi = np.pi * (3. - np.sqrt(5.))
@@ -149,7 +157,7 @@ class V3DWindow(Qt3DExtras.Qt3DWindow):
 
             # create leaf
             path = os.path.join(self.__currentDir, dir_list[i])
-            leafModel = TreeLeafModel(path, dir_list[i], self.directoryType(path), path)
+            leafModel = TreeLeafModel(path, dir_list[i], directoryType(path), path)
             leaf = TreeLeaf(self.rootEntity, self.camera(), leafModel)
             leaf.clicked.connect(self.__handleLeafClicked)
 
@@ -168,8 +176,10 @@ class V3DWindow(Qt3DExtras.Qt3DWindow):
         if not os.path.exists(path):
             return
 
+        if os.path.isfile(path):
+            return
+
         self.__currentDir = path
-        print(self.__currentDir)
         self.constructScene()
 
     # endregion

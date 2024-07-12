@@ -18,7 +18,7 @@ class TreeLeafModel:
 
         self.iconHeight = 30
         self.textHeight = 10
-        self.separation = 1.2
+        self.separation = 1.7
 
     def computeIconTextPositions(self, pos: QVector3D) -> tuple[QVector3D, QVector3D]:
         """
@@ -31,7 +31,7 @@ class TreeLeafModel:
         iPos = pos
 
         # collect the positions
-        tPos = QVector3D(0, -self.separation, 0)
+        tPos = QVector3D(pos.x(), pos.y() - self.separation, pos.z())
 
         return iPos, tPos
 

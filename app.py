@@ -11,10 +11,10 @@ from views.explorer import FileExplorer
 from assets import resources
 
 # define the environment settings
-os.environ["QT_QPA_PLATFORM"] = "windows:darkmode=0"  # disable dark mode support
+# os.environ["QT_QPA_PLATFORM"] = "windows:darkmode=0"  # disable dark mode support
 
 # initialize the window taskbar icon
-myAppID = u'ubc.ComplexFluidsGroup.Seal.0'
+myAppID = u'akumah.file.tree.0'
 ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myAppID)
 basedir = os.path.dirname(__file__)
 

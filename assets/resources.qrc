@@ -12,5 +12,12 @@
         <file>meshes/cube.obj</file>
         <file>meshes/cuboid.obj</file>
         <file>meshes/sphere.obj</file>
+        <file>meshes/grid.obj</file>
+        <file>meshes/file.obj</file>
+        <file>meshes/file_light.obj</file>
+        <file>meshes/file.mtl</file>
+        <file>meshes/folder.obj</file>
+        <file>meshes/folder_light.obj</file>
+        <file>meshes/folder.mtl</file>
     </qresource>
 </RCC>
